@@ -45,7 +45,7 @@ You may list what feature you created, example :
 * `pages`
 
 ## <a name="link"></a> Website URL :
-[Demo Video Naive Bayes Kalori Pasien](https://youtu.be/yEmZDY9ThUA?si=4VfPajbaU7dMByoA)
+- Unavailable
 
 <hr>
 
