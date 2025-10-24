@@ -1,3 +1,54 @@
+# Sistem Naive Bayes pada Defisit Pasien dan Kalori Pasien
+
+## <a name="introduction"></a> Introduction :
+Proyek ini mengimplementasikan Sistem Klasifikasi Naive Bayes untuk menganalisis serta memprediksi tingkat defisit dan kebutuhan kalori pasien berdasarkan data medis dan gizi.
+Tujuannya adalah membantu tenaga kesehatan maupun pasien dalam memahami kebutuhan nutrisi tubuh melalui pendekatan algoritma machine learning Naive Bayes yang sederhana namun efektif.
+
+Pada hasil akhir, setiap pasien akan memperoleh kategori kalori dan rekomendasi makanan yang sesuai dengan kebutuhan tubuh serta kondisi kesehatannya.
+Aplikasi ini mencakup fitur pengelolaan data pasien, kriteria penilaian, pelatihan dataset, perhitungan Naive Bayes, dan tampilan hasil secara interaktif.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Libraries](#libraries)
+- [Project Structure](#project-structures)
+- [Link](#link)
+
+## <a name="features"></a> Features :
+You may list what feature you created, example :
+- Login Page
+- Dashboard
+- Kriteria Pasien
+- Dataset Pasien
+- Perhitungan Naive Bayes
+- Hasil Perhitungan Pasien
+- Kriteria Makanan
+- Dataset Makanan
+- Perhitungan Naive Bayes
+- Hasil Perhitungan Makanan
+
+## <a name="libraries"></a> Libraries :
+- ReactJS
+- Axios
+- Redux
+- React-icons
+- Tailwind
+- Craco
+
+## <a name="project-structures"></a> Project Structure :
+* `app`
+* `assets`
+* `components`
+* `contexts`
+* `features`
+* `pages`
+
+## <a name="link"></a> Website URL :
+[Demo Video Naive Bayes Kalori Pasien](https://youtu.be/yEmZDY9ThUA?si=4VfPajbaU7dMByoA)
+
+<hr>
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
