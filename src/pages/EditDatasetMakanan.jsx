@@ -205,6 +205,7 @@ const EditDatasetMakanan = () => {
                       <div className="relative">
                         {/* Input Text untuk Nama Makanan dan Kategori Makanan */}
                         {kriteria.namaKriteria === "Nama Makanan" ||
+                        kriteria.namaKriteria === "Jumlah Kalori" ||
                         kriteria.namaKriteria === "Kategori Makanan" ? (
                           <input
                             type="text"
@@ -291,7 +292,8 @@ const EditDatasetMakanan = () => {
                         {/* Dropdown Arrow Icon untuk select */}
                         {!(
                           kriteria.namaKriteria === "Nama Makanan" ||
-                          kriteria.namaKriteria === "Kategori Makanan"
+                          kriteria.namaKriteria === "Kategori Makanan" ||
+                          kriteria.namaKriteria === "Jumlah Kalori" 
                         ) && (
                           <div className="absolute inset-y-0 right-0 flex items-center pr-6 pointer-events-none">
                             <svg

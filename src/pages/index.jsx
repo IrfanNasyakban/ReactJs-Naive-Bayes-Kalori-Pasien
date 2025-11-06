@@ -20,3 +20,4 @@ export { default as AddDatasetMakanan } from './AddDatasetMakanan';
 export { default as EditDatasetMakanan } from './EditDatasetMakanan';
 export { default as PerhitunganMakanan } from './PerhitunganMakanan';
 export { default as HasilAkhirMakanan } from './HasilAkhirMakanan';
+export { default as CetakHasil } from './CetakHasil';

@@ -207,6 +207,7 @@ const AddDatasetMakanan = () => {
                       <div className="relative">
                         {/* Input Text untuk Nama Makanan dan Kategori Makanan */}
                         {kriteria.namaKriteria === "Nama Makanan" ||
+                        kriteria.namaKriteria === "Jumlah Kalori" ||
                         kriteria.namaKriteria === "Kategori Makanan" ? (
                           <input
                             type="text"
@@ -293,6 +294,7 @@ const AddDatasetMakanan = () => {
                         {/* Dropdown Arrow Icon untuk select */}
                         {!(
                           kriteria.namaKriteria === "Nama Makanan" ||
+                          kriteria.namaKriteria === "Jumlah Kalori" ||
                           kriteria.namaKriteria === "Kategori Makanan"
                         ) && (
                           <div className="absolute inset-y-0 right-0 flex items-center pr-6 pointer-events-none">

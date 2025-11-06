@@ -72,7 +72,7 @@ const PerhitunganMakanan = () => {
   // Fungsi untuk menghitung Naive Bayes
   const calculateNaiveBayes = (dataset, kriteria) => {
     // Filter kriteria untuk mendapatkan atribut (exclude "Main")
-    const excludes = ["Nama Makanan", "Kategori Makanan", "Kategori"];
+    const excludes = ["Nama Makanan", "Jumlah Kalori", "Kategori Makanan", "Kategori"];
 
     const atribut = kriteria
       .filter((k) => !excludes.includes(k.namaKriteria))

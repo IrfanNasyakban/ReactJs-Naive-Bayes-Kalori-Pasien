@@ -3,7 +3,7 @@ import axios from "axios";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getMe } from "../features/authSlice";
-import { FaTable, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+import { FaTable, FaCheckCircle, FaExclamationTriangle, FaPrint } from "react-icons/fa";
 
 const HasilAkhirPasien = () => {
   const [hasilAkhirPasien, setHasilAkhirPasien] = useState([]);
@@ -68,6 +68,17 @@ const HasilAkhirPasien = () => {
     } else if (kategoriPasien === "Defisit Kalori") {
       // Untuk defisit kalori, tampilkan makanan tinggi kalori
       return makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Tidak");
+    } else if (kategoriPasien === "Kalori Normal") {
+      // Untuk kalori normal, tampilkan kombinasi makanan tinggi dan rendah kalori
+      const kaloriTinggi = makanan
+        .filter((item) => item.nilai["Kalori Tinggi"] === "Ya")
+        .slice(0, 3); // Ambil 3 makanan kalori tinggi
+
+      const kaloriRendah = makanan
+        .filter((item) => item.nilai["Kalori Tinggi"] === "Tidak")
+        .slice(0, 3); // Ambil 3 makanan kalori rendah
+
+      return [...kaloriTinggi, ...kaloriRendah]; // Gabungkan keduanya
     }
     return [];
   };
@@ -367,35 +378,30 @@ const HasilAkhirPasien = () => {
                       </div>
                     </div>
 
-                    {/* Saran Makanan Per Pasien - Hanya untuk Surplus dan Defisit */}
-                    {hasilAkhirPasien.filter(
-                      (p) => p.kategori === "Surplus Kalori" || p.kategori === "Defisit Kalori"
-                    ).length > 0 && (
+                    {/* Saran Makanan Per Pasien - Untuk semua kategori */}
+                    {hasilAkhirPasien.length > 0 && (
                       <div className="space-y-4">
                         <h4 className="text-white font-semibold text-base sm:text-lg">
                           🍽️ Saran Makanan Per Pasien
                         </h4>
                         
-                        {hasilAkhirPasien
-                          .filter(
-                            (pasien) =>
-                              pasien.kategori === "Surplus Kalori" ||
-                              pasien.kategori === "Defisit Kalori"
-                          )
-                          .map((pasien, index) => {
-                            const rekomendasiMakanan = getRekomendasiMakanan(pasien.kategori);
-                            
-                            return (
-                              <div
-                                key={index}
-                                className={`bg-white/5 rounded-lg p-4 border-l-4 ${
-                                  pasien.kategori === "Surplus Kalori"
-                                    ? "border-blue-500"
-                                    : "border-orange-500"
-                                }`}
-                              >
-                                {/* Header Pasien */}
-                                <div className="mb-4">
+                        {hasilAkhirPasien.map((pasien, index) => {
+                          const rekomendasiMakanan = getRekomendasiMakanan(pasien.kategori);
+                          
+                          return (
+                            <div
+                              key={index}
+                              className={`bg-white/5 rounded-lg p-4 border-l-4 ${
+                                pasien.kategori === "Surplus Kalori"
+                                  ? "border-blue-500"
+                                  : pasien.kategori === "Defisit Kalori"
+                                  ? "border-orange-500"
+                                  : "border-green-500"
+                              }`}
+                            >
+                              {/* Header Pasien */}
+                              <div className="mb-4 flex items-start justify-between">
+                                <div>
                                   <h5 className="text-white font-semibold text-base mb-2">
                                     {pasien.namaPasien}
                                   </h5>
@@ -417,81 +423,121 @@ const HasilAkhirPasien = () => {
                                   </div>
                                 </div>
 
-                                {/* Rekomendasi Makanan */}
-                                {rekomendasiMakanan.length > 0 ? (
-                                  <div>
-                                    <p className="text-white/70 text-sm mb-3 font-medium">
+                                {/* Tombol Cetak di sebelah kanan header pasien */}
+                                <div className="ml-4">
+                                  <button
+                                    onClick={() => {
+                                      const rekomendasiMakanan = getRekomendasiMakanan(pasien.kategori);
+                                      navigate(`/cetak/${pasien.id}`, {
+                                        state: {
+                                          rekomendasiMakanan: rekomendasiMakanan.map(item => ({
+                                            namaMakanan: item.nilai["Nama Makanan"],
+                                            kategori: item.nilai["Kategori Makanan"],
+                                            kalori: item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah",
+                                            jumlahKalori: item.nilai["Jumlah Kalori"]
+                                          }))
+                                        }
+                                      });
+                                    }}
+                                    className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-sm sm:text-base font-semibold rounded-lg shadow-md ring-1 ring-white/10 transition-transform transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    aria-label={`Cetak laporan ${pasien.namaPasien}`}
+                                  >
+                                    <FaPrint className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    <span className="leading-none">Cetak</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Rekomendasi Makanan */}
+                              {rekomendasiMakanan.length > 0 ? (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <p className="text-white/70 text-sm font-medium">
                                       Rekomendasi Makanan:
                                     </p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                      {rekomendasiMakanan.slice(0, 25).map((item, idx) => (
-                                        <div
-                                          key={idx}
-                                          className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all"
-                                        >
-                                          <div className="flex justify-between items-start gap-2 mb-2">
-                                            <p className="text-white text-sm font-medium flex-1">
-                                              {item.nilai["Nama Makanan"]}
-                                            </p>
-                                            <span
-                                              className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
-                                                item.nilai["Kalori Tinggi"] === "Ya"
-                                                  ? "bg-red-500/20 text-red-400"
-                                                  : "bg-green-500/20 text-green-400"
-                                              }`}
-                                            >
-                                              {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
-                                            </span>
-                                          </div>
-                                          
-                                          <p className="text-white/50 text-xs mb-2">
-                                            {item.nilai["Kategori Makanan"]}
-                                          </p>
-
-                                          {/* Badge Nutrisi */}
-                                          <div className="flex flex-wrap gap-1">
-                                            {item.nilai["Protein Tinggi"] === "Ya" && (
-                                              <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
-                                                Protein
-                                              </span>
-                                            )}
-                                            {item.nilai["Karbo Tinggi"] === "Ya" && (
-                                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
-                                                Karbo
-                                              </span>
-                                            )}
-                                            {item.nilai["Lemak Tinggi"] === "Ya" && (
-                                              <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
-                                                Lemak
-                                              </span>
-                                            )}
-                                            {item.nilai["IG Tinggi"] === "Tidak" && (
-                                              <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
-                                                IG Rendah
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-
-                                    {/* Catatan */}
-                                    <div className="mt-4 p-3 bg-white/5 rounded-lg">
-                                      <p className="text-white/60 text-xs leading-relaxed">
-                                        💡 {pasien.kategori === "Surplus Kalori"
-                                          ? "Fokus pada makanan rendah kalori, tinggi serat, dan protein untuk membantu mengurangi asupan kalori harian."
-                                          : "Konsumsi makanan tinggi kalori dan nutrisi untuk meningkatkan asupan energi harian Anda."}
-                                      </p>
-                                    </div>
+                                    {/* tombol cetak dipindahkan ke header pasien */}
                                   </div>
-                                ) : (
-                                  <p className="text-white/50 text-sm italic">
-                                    Tidak ada rekomendasi makanan tersedia untuk kategori ini.
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {rekomendasiMakanan.slice(0, 25).map((item, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all"
+                                      >
+                                        <div className="flex justify-between items-start gap-2 mb-2">
+                                          <p className="text-white text-sm font-medium flex-1">
+                                            {item.nilai["Nama Makanan"]}
+                                          </p>
+                                          <span
+                                            className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
+                                              item.nilai["Kalori Tinggi"] === "Ya"
+                                                ? "bg-red-500/20 text-red-400"
+                                                : "bg-green-500/20 text-green-400"
+                                            }`}
+                                          >
+                                            {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
+                                          </span>
+                                        </div>
+                                        
+                                        <p className="text-white/50 text-xs mb-2">
+                                          {item.nilai["Kategori Makanan"]}
+                                        </p>
+
+                                        {/* Badge Nutrisi */}
+                                        <div className="flex flex-wrap gap-1">
+                                          {item.nilai["Protein Tinggi"] === "Ya" && (
+                                            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                              Protein
+                                            </span>
+                                          )}
+                                          <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                            {item.nilai["Jumlah Kalori"]}
+                                          </span>
+                                          {item.nilai["Karbo Tinggi"] === "Ya" && (
+                                            <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
+                                              Karbo
+                                            </span>
+                                          )}
+                                          {item.nilai["Lemak Tinggi"] === "Ya" && (
+                                            <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                                              Lemak
+                                            </span>
+                                          )}
+                                          {item.nilai["IG Tinggi"] === "Tidak" && (
+                                            <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                                              IG Rendah
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Catatan */}
+                                  <div className="mt-4 p-3 bg-white/5 rounded-lg">
+                                    <p className="text-white/60 text-xs leading-relaxed">
+                                      💡 {pasien.kategori === "Surplus Kalori"
+                                        ? "Konsumsi makanan tinggi kalori dan nutrisi untuk meningkatkan asupan energi harian Anda."
+                                        : "Fokus pada makanan rendah kalori, tinggi serat, dan protein untuk membantu mengurangi asupan kalori harian."}
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-white/50 text-sm italic">
+                                  Tidak ada rekomendasi makanan tersedia untuk kategori ini.
+                                </p>
+                              )}
+
+                              {/* Tambahkan pesan khusus untuk kategori normal */}
+                              {pasien.kategori === "Kalori Normal" && (
+                                <div className="mt-4 p-3 bg-white/5 rounded-lg">
+                                  <p className="text-white/60 text-xs leading-relaxed">
+                                    💡 Pertahankan pola makan seimbang dengan kombinasi makanan berkalori tinggi dan rendah untuk menjaga asupan kalori tetap normal.
                                   </p>
-                                )}
-                              </div>
-                            );
-                          })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

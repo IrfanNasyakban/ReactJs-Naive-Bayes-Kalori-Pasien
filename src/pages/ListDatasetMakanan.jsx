@@ -140,7 +140,7 @@ const ListDatasetMakanan = () => {
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <span className="text-white font-medium">
+                            <span className="text-white text">
                               {index + 1}
                             </span>
                           </div>
@@ -148,7 +148,7 @@ const ListDatasetMakanan = () => {
                         {kriteriaMakanan.map((kriteria) => (
                           <td
                             key={kriteria.id}
-                            className="px-6 py-4 whitespace-nowrap text-white/80"
+                            className="px-6 py-4 whitespace-nowrap text-white/80 text-xs"
                           >
                             {item.nilai
                               ? item.nilai[kriteria.namaKriteria] || "-"

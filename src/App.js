@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useMatch } from "react-router-dom";
 
 import { Navbar, Footer, Sidebar } from "./components";
-import { Dashboard, LoginPage, ListKriteriaPasien, AddKriteriaDefisit, AddKriteriaSurplus, EditKriteriaDefisit, EditKriteriaSurplus, ListDatasetPasien, AddDatasetDefisit, EditDatasetDefisit, AddDatasetSurplus, EditDatasetSurplus, PerhitunganPasien, HasilAkhirPasien, ListKriteriaMakanan, AddKriteriaMakanan, EditKriteriaMakanan, ListDatasetMakanan, AddDatasetMakanan, EditDatasetMakanan, PerhitunganMakanan, HasilAkhirMakanan } from "./pages";
+import { Dashboard, CetakHasil, LoginPage, ListKriteriaPasien, AddKriteriaDefisit, AddKriteriaSurplus, EditKriteriaDefisit, EditKriteriaSurplus, ListDatasetPasien, AddDatasetDefisit, EditDatasetDefisit, AddDatasetSurplus, EditDatasetSurplus, PerhitunganPasien, HasilAkhirPasien, ListKriteriaMakanan, AddKriteriaMakanan, EditKriteriaMakanan, ListDatasetMakanan, AddDatasetMakanan, EditDatasetMakanan, PerhitunganMakanan, HasilAkhirMakanan } from "./pages";
 
 import { useStateContext } from "./contexts/ContextProvider";
 
@@ -12,6 +12,7 @@ const AppContent = () => {
   const { activeMenu, screenSize, currentMode } = useStateContext();
   const location = useLocation();
   const isLoginPage = location.pathname === "/";
+  const isCetakHasil = useMatch("/cetak/:id") !== null;
 
   // Toggle class body-no-scroll for mobile
   useEffect(() => {
@@ -28,14 +29,14 @@ const AppContent = () => {
   }, [activeMenu, screenSize]);
 
   // Determine if we should apply sidebar margin (only on desktop)
-  const shouldApplySidebarMargin = !isLoginPage && activeMenu && screenSize && screenSize > 900;
+  const shouldApplySidebarMargin = !isCetakHasil && !isLoginPage && activeMenu && screenSize && screenSize > 900;
 
   return (
     <div className={currentMode === "Dark" ? "dark" : ""}>
       <div className="flex relative dark:bg-main-dark-bg">
 
         {/* Sidebar - Always render the component but let it handle its own visibility */}
-        {!isLoginPage && <Sidebar />}
+        {!isLoginPage && !isCetakHasil && <Sidebar />}
 
         {/* Main Content */}
         <div
@@ -43,7 +44,7 @@ const AppContent = () => {
             shouldApplySidebarMargin ? "sidebar-visible" : "full-width"
           }`}
         >
-          {!isLoginPage && (
+          {!isLoginPage && !isCetakHasil && (
             <div className="fixed md:static bg-main-bg dark:bg-main-dark-bg navbar w-full">
               <Navbar />
             </div>
@@ -52,6 +53,7 @@ const AppContent = () => {
           <div>
             <Routes>
               <Route path="/" element={<LoginPage />} />
+              <Route path="/cetak/:id" element={<CetakHasil />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/kriteria-pasien" element={<ListKriteriaPasien />} />
               <Route path="/add-kriteria-defisit" element={<AddKriteriaDefisit />} />
@@ -73,10 +75,11 @@ const AppContent = () => {
               <Route path="/edit-dataset-makanan/:id" element={<EditDatasetMakanan />} />
               <Route path="/perhitungan-makanan" element={<PerhitunganMakanan />} />
               <Route path="/hasil-makanan" element={<HasilAkhirMakanan />} />
+              
             </Routes>
           </div>
 
-          {!isLoginPage && <Footer />}
+          {!isLoginPage && !isCetakHasil && <Footer />}
         </div>
       </div>
     </div>
