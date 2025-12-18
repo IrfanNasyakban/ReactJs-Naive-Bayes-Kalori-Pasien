@@ -60,27 +60,172 @@ const HasilAkhirPasien = () => {
     }
   };
 
-  // Function untuk mendapatkan rekomendasi makanan berdasarkan kategori pasien
-  const getRekomendasiMakanan = (kategoriPasien) => {
-    if (kategoriPasien === "Surplus Kalori") {
-      // Untuk surplus kalori, tampilkan makanan rendah kalori
-      return makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Ya");
-    } else if (kategoriPasien === "Defisit Kalori") {
-      // Untuk defisit kalori, tampilkan makanan tinggi kalori
-      return makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Tidak");
-    } else if (kategoriPasien === "Kalori Normal") {
-      // Untuk kalori normal, tampilkan kombinasi makanan tinggi dan rendah kalori
-      const kaloriTinggi = makanan
-        .filter((item) => item.nilai["Kalori Tinggi"] === "Ya")
-        .slice(0, 3); // Ambil 3 makanan kalori tinggi
-
-      const kaloriRendah = makanan
-        .filter((item) => item.nilai["Kalori Tinggi"] === "Tidak")
-        .slice(0, 3); // Ambil 3 makanan kalori rendah
-
-      return [...kaloriTinggi, ...kaloriRendah]; // Gabungkan keduanya
+  // Function untuk shuffle array (Fisher-Yates algorithm)
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    return [];
+    return shuffled;
+  };
+
+  // Function untuk mendapatkan makanan random berdasarkan kategori spesifik
+  const getRandomBySpecificCategory = (foods, categoryName, count) => {
+    const filtered = foods.filter(food => {
+      const kategori = food.nilai["Kategori Makanan"];
+      return kategori && kategori.toLowerCase().includes(categoryName.toLowerCase());
+    });
+    
+    const shuffled = shuffleArray(filtered);
+    return shuffled.slice(0, count);
+  };
+
+  // Function untuk mendapatkan rekomendasi makanan berdasarkan kategori pasien
+  // Surplus: 7 tinggi + 3 rendah = 10 total (Karbo 3, Protein 3, Serat 2, Camilan 2)
+  // Normal: 5 tinggi + 5 rendah = 10 total
+  // Defisit: 10 rendah = 10 total
+  const getRekomendasiMakanan = (kategoriPasien) => {
+    let result = [];
+    
+    if (kategoriPasien === "Surplus Kalori") {
+      // Untuk surplus kalori: 7 makanan tinggi kalori + 3 makanan rendah kalori = 10 total
+      // Distribusi: Karbohidrat (3), Protein (3), Serat (2), Camilan (2)
+      const kaloriTinggi = makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Ya");
+      const kaloriRendah = makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Tidak");
+      
+      // Karbohidrat: 3 menu (2 tinggi + 1 rendah)
+      const karboTinggi = getRandomBySpecificCategory(kaloriTinggi, "karbohidrat", 2);
+      const karboRendah = getRandomBySpecificCategory(kaloriRendah, "karbohidrat", 1);
+      
+      // Protein: 3 menu (3 tinggi)
+      const proteinTinggi = getRandomBySpecificCategory(kaloriTinggi, "protein", 3);
+      
+      // Serat: 2 menu (1 tinggi + 1 rendah)
+      const seratTinggi = getRandomBySpecificCategory(kaloriTinggi, "serat", 1);
+      const seratRendah = getRandomBySpecificCategory(kaloriRendah, "serat", 1);
+      
+      // Camilan: 2 menu (1 tinggi + 1 rendah)
+      const cemilanTinggi = getRandomBySpecificCategory(kaloriTinggi, "camilan", 1);
+      const cemilanRendah = getRandomBySpecificCategory(kaloriRendah, "camilan", 1);
+      
+      result = [
+        ...karboTinggi,      // 2 tinggi
+        ...karboRendah,      // 1 rendah
+        ...proteinTinggi,    // 3 tinggi
+        ...seratTinggi,      // 1 tinggi
+        ...seratRendah,      // 1 rendah
+        ...cemilanTinggi,    // 1 tinggi
+        ...cemilanRendah     // 1 rendah
+      ];
+      // Total: 7 tinggi (2+3+1+1) + 3 rendah (1+1+1) = 10 menu
+      
+      // Verifikasi dan lengkapi jika kurang
+      const usedNames = result.map(item => item.nilai["Nama Makanan"]);
+      const highCount = result.filter(item => item.nilai["Kalori Tinggi"] === "Ya").length;
+      const lowCount = result.filter(item => item.nilai["Kalori Tinggi"] === "Tidak").length;
+      
+      // Jika kurang dari target, tambahkan
+      if (highCount < 7) {
+        const needed = 7 - highCount;
+        const additionalHigh = kaloriTinggi
+          .filter(item => !usedNames.includes(item.nilai["Nama Makanan"]))
+          .slice(0, needed);
+        result = [...result, ...additionalHigh];
+      } else if (highCount > 7) {
+        // Jika lebih, kurangi
+        const toRemove = highCount - 7;
+        const highItems = result.filter(item => item.nilai["Kalori Tinggi"] === "Ya");
+        result = result.filter(item => !highItems.slice(-toRemove).includes(item));
+      }
+      
+      if (lowCount < 3 && result.length < 10) {
+        const needed = Math.min(3 - lowCount, 10 - result.length);
+        const currentNames = result.map(item => item.nilai["Nama Makanan"]);
+        const additionalLow = kaloriRendah
+          .filter(item => !currentNames.includes(item.nilai["Nama Makanan"]))
+          .slice(0, needed);
+        result = [...result, ...additionalLow];
+      }
+      
+    } else if (kategoriPasien === "Defisit Kalori") {
+      // Untuk defisit kalori: 10 makanan rendah kalori
+      const kaloriRendah = makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Tidak");
+      
+      // Karbohidrat: 3 rendah kalori
+      const karbo = getRandomBySpecificCategory(kaloriRendah, "karbohidrat", 3);
+      
+      // Protein: 3 rendah kalori
+      const protein = getRandomBySpecificCategory(kaloriRendah, "protein", 3);
+      
+      // Serat: 2 rendah kalori
+      const serat = getRandomBySpecificCategory(kaloriRendah, "serat", 2);
+      
+      // Camilan: 2 rendah kalori
+      const cemilan = getRandomBySpecificCategory(kaloriRendah, "camilan", 2);
+      
+      result = [...karbo, ...protein, ...serat, ...cemilan];
+      
+      // Jika kurang dari 10, tambahkan dari makanan rendah kalori lainnya
+      if (result.length < 10) {
+        const remaining = 10 - result.length;
+        const usedNames = result.map(item => item.nilai["Nama Makanan"]);
+        const additionalLow = kaloriRendah
+          .filter(item => !usedNames.includes(item.nilai["Nama Makanan"]))
+          .slice(0, remaining);
+        result = [...result, ...additionalLow];
+      }
+      
+    } else if (kategoriPasien === "Kalori Normal") {
+      // Untuk kalori normal: 5 makanan tinggi kalori + 5 makanan rendah kalori
+      const kaloriTinggi = makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Ya");
+      const kaloriRendah = makanan.filter((item) => item.nilai["Kalori Tinggi"] === "Tidak");
+      
+      // Karbohidrat: 2 tinggi + 1 rendah = 3
+      const karboTinggi = getRandomBySpecificCategory(kaloriTinggi, "karbohidrat", 2);
+      const karboRendah = getRandomBySpecificCategory(kaloriRendah, "karbohidrat", 1);
+      
+      // Protein: 2 tinggi + 2 rendah = 4
+      const proteinTinggi = getRandomBySpecificCategory(kaloriTinggi, "protein", 2);
+      const proteinRendah = getRandomBySpecificCategory(kaloriRendah, "protein", 2);
+      
+      // Serat: 1 tinggi + 1 rendah = 2
+      const seratTinggi = getRandomBySpecificCategory(kaloriTinggi, "serat", 1);
+      const seratRendah = getRandomBySpecificCategory(kaloriRendah, "serat", 1);
+      
+      // Camilan: 0 tinggi + 1 rendah = 1 (akan di-adjust)
+      const cemilanRendah = getRandomBySpecificCategory(kaloriRendah, "camilan", 1);
+      
+      result = [...karboTinggi, ...karboRendah, ...proteinTinggi, ...proteinRendah, ...seratTinggi, ...seratRendah, ...cemilanRendah];
+      
+      // Verifikasi dan adjust ke 5 tinggi dan 5 rendah
+      const highCount = result.filter(item => item.nilai["Kalori Tinggi"] === "Ya").length;
+      const lowCount = result.filter(item => item.nilai["Kalori Tinggi"] === "Tidak").length;
+      
+      const usedNames = result.map(item => item.nilai["Nama Makanan"]);
+      
+      if (highCount < 5) {
+        const needed = 5 - highCount;
+        const additionalHigh = kaloriTinggi
+          .filter(item => !usedNames.includes(item.nilai["Nama Makanan"]))
+          .slice(0, needed);
+        result = [...result, ...additionalHigh];
+        usedNames.push(...additionalHigh.map(item => item.nilai["Nama Makanan"]));
+      }
+      
+      if (lowCount < 5) {
+        const needed = 5 - lowCount;
+        const additionalLow = kaloriRendah
+          .filter(item => !usedNames.includes(item.nilai["Nama Makanan"]))
+          .slice(0, needed);
+        result = [...result, ...additionalLow];
+      }
+    }
+    
+    // Filter hasil yang valid dan batasi maksimal 10
+    const finalResult = result.filter(item => item && item.nilai).slice(0, 10);
+    
+    return finalResult;
   };
 
   return (
@@ -408,17 +553,21 @@ const HasilAkhirPasien = () => {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span
                                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                        pasien.kategori === "Surplis Kalori"
+                                        pasien.kategori === "Surplus Kalori"
+                                          ? "bg-blue-500/20 text-blue-400"
+                                          : pasien.kategori === "Defisit Kalori"
                                           ? "bg-orange-500/20 text-orange-400"
-                                          : "bg-blue-500/20 text-blue-400"
+                                          : "bg-green-500/20 text-green-400"
                                       }`}
                                     >
                                       {pasien.kategori}
                                     </span>
                                     <span className="text-white/60 text-xs">
-                                      {pasien.kategori === "Defisit Kalori"
+                                      {pasien.kategori === "Surplus Kalori"
+                                        ? "🔼 Tambah Kalori"
+                                        : pasien.kategori === "Defisit Kalori"
                                         ? "🔽 Kurangi Kalori"
-                                        : "🔼 Tambah Kalori"}
+                                        : "⚖️ Pertahankan"}
                                     </span>
                                   </div>
                                 </div>
@@ -453,71 +602,527 @@ const HasilAkhirPasien = () => {
                                 <div>
                                   <div className="flex items-center justify-between mb-3">
                                     <p className="text-white/70 text-sm font-medium">
-                                      Rekomendasi Makanan:
+                                      Rekomendasi Makanan (10 Menu):
                                     </p>
-                                    {/* tombol cetak dipindahkan ke header pasien */}
+                                    {/* Summary Counter */}
+                                    <div className="flex gap-2">
+                                      <span className="px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded-full font-semibold">
+                                        Tinggi: {rekomendasiMakanan.filter(item => item.nilai["Kalori Tinggi"] === "Ya").length}
+                                      </span>
+                                      <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full font-semibold">
+                                        Rendah: {rekomendasiMakanan.filter(item => item.nilai["Kalori Tinggi"] === "Tidak").length}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {rekomendasiMakanan.slice(0, 25).map((item, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all"
-                                      >
-                                        <div className="flex justify-between items-start gap-2 mb-2">
-                                          <p className="text-white text-sm font-medium flex-1">
-                                            {item.nilai["Nama Makanan"]}
-                                          </p>
-                                          <span
-                                            className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
-                                              item.nilai["Kalori Tinggi"] === "Ya"
-                                                ? "bg-red-500/20 text-red-400"
-                                                : "bg-green-500/20 text-green-400"
-                                            }`}
-                                          >
-                                            {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
-                                          </span>
-                                        </div>
-                                        
-                                        <p className="text-white/50 text-xs mb-2">
-                                          {item.nilai["Kategori Makanan"]}
-                                        </p>
 
-                                        {/* Badge Nutrisi */}
-                                        <div className="flex flex-wrap gap-1">
-                                          {item.nilai["Protein Tinggi"] === "Ya" && (
-                                            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
-                                              Protein
-                                            </span>
-                                          )}
-                                          <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
-                                            {item.nilai["Jumlah Kalori"]}
-                                          </span>
-                                          {item.nilai["Karbo Tinggi"] === "Ya" && (
-                                            <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
-                                              Karbo
-                                            </span>
-                                          )}
-                                          {item.nilai["Lemak Tinggi"] === "Ya" && (
-                                            <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
-                                              Lemak
-                                            </span>
-                                          )}
-                                          {item.nilai["IG Tinggi"] === "Tidak" && (
-                                            <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
-                                              IG Rendah
-                                            </span>
-                                          )}
-                                        </div>
+                                  {/* Group makanan by kategori */}
+                                  {(() => {
+                                    const groupedByCategory = {
+                                      karbohidrat: [],
+                                      protein: [],
+                                      serat: [],
+                                      camilan: [],
+                                      lainnya: []
+                                    };
+
+                                    rekomendasiMakanan.forEach(item => {
+                                      const kategori = item.nilai["Kategori Makanan"]?.toLowerCase() || "";
+                                      if (kategori.includes("karbohidrat")) {
+                                        groupedByCategory.karbohidrat.push(item);
+                                      } else if (kategori.includes("protein")) {
+                                        groupedByCategory.protein.push(item);
+                                      } else if (kategori.includes("serat") || kategori.includes("buah") || kategori.includes("sayur")) {
+                                        groupedByCategory.serat.push(item);
+                                      } else if (kategori.includes("camilan") || kategori.includes("minuman") || kategori.includes("snack")) {
+                                        groupedByCategory.camilan.push(item);
+                                      } else {
+                                        groupedByCategory.lainnya.push(item);
+                                      }
+                                    });
+
+                                    return (
+                                      <div className="space-y-4">
+                                        {/* Karbohidrat */}
+                                        {groupedByCategory.karbohidrat.length > 0 && (
+                                          <div>
+                                            <h6 className="text-yellow-400 font-semibold text-sm mb-2 flex items-center gap-2">
+                                              🍚 Karbohidrat ({groupedByCategory.karbohidrat.length})
+                                            </h6>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                              {groupedByCategory.karbohidrat.map((item, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all border border-yellow-500/20"
+                                                >
+                                                  <div className="flex justify-between items-start gap-2 mb-2">
+                                                    <p className="text-white text-sm font-medium flex-1">
+                                                      {item.nilai["Nama Makanan"]}
+                                                    </p>
+                                                    <span
+                                                      className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
+                                                        item.nilai["Kalori Tinggi"] === "Ya"
+                                                          ? "bg-red-500/20 text-red-400"
+                                                          : "bg-green-500/20 text-green-400"
+                                                      }`}
+                                                    >
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
+                                                    </span>
+                                                  </div>
+                                                  
+                                                  <p className="text-white/50 text-xs mb-2">
+                                                    {item.nilai["Kategori Makanan"]}
+                                                  </p>
+
+                                                  {/* Rekomendasi Konsumsi */}
+                                                  {pasien.kategori === "Surplus Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {pasien.kategori === "Defisit Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {pasien.kategori === "Kalori Normal" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-yellow-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Sedang
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {/* Badge Nutrisi */}
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                      {item.nilai["Jumlah Kalori"]} kkal
+                                                    </span>
+                                                    {item.nilai["Protein Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                        Protein
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Karbo Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
+                                                        Karbo
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Lemak Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                                                        Lemak
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["IG Tinggi"] === "Tidak" && (
+                                                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                                                        IG Rendah
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Protein */}
+                                        {groupedByCategory.protein.length > 0 && (
+                                          <div>
+                                            <h6 className="text-purple-400 font-semibold text-sm mb-2 flex items-center gap-2">
+                                              🥩 Protein ({groupedByCategory.protein.length})
+                                            </h6>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                              {groupedByCategory.protein.map((item, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all border border-purple-500/20"
+                                                >
+                                                  <div className="flex justify-between items-start gap-2 mb-2">
+                                                    <p className="text-white text-sm font-medium flex-1">
+                                                      {item.nilai["Nama Makanan"]}
+                                                    </p>
+                                                    <span
+                                                      className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
+                                                        item.nilai["Kalori Tinggi"] === "Ya"
+                                                          ? "bg-red-500/20 text-red-400"
+                                                          : "bg-green-500/20 text-green-400"
+                                                      }`}
+                                                    >
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
+                                                    </span>
+                                                  </div>
+                                                  
+                                                  <p className="text-white/50 text-xs mb-2">
+                                                    {item.nilai["Kategori Makanan"]}
+                                                  </p>
+
+                                                  {/* Rekomendasi Konsumsi */}
+                                                  {pasien.kategori === "Surplus Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {pasien.kategori === "Defisit Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {pasien.kategori === "Kalori Normal" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-yellow-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Sedang
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {/* Badge Nutrisi */}
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                      {item.nilai["Jumlah Kalori"]} kkal
+                                                    </span>
+                                                    {item.nilai["Protein Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                        Protein
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Karbo Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
+                                                        Karbo
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Lemak Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                                                        Lemak
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["IG Tinggi"] === "Tidak" && (
+                                                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                                                        IG Rendah
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Serat / Sayuran & Buah */}
+                                        {groupedByCategory.serat.length > 0 && (
+                                          <div>
+                                            <h6 className="text-green-400 font-semibold text-sm mb-2 flex items-center gap-2">
+                                              🥗 Serat / Sayur & Buah ({groupedByCategory.serat.length})
+                                            </h6>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                              {groupedByCategory.serat.map((item, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all border border-green-500/20"
+                                                >
+                                                  <div className="flex justify-between items-start gap-2 mb-2">
+                                                    <p className="text-white text-sm font-medium flex-1">
+                                                      {item.nilai["Nama Makanan"]}
+                                                    </p>
+                                                    <span
+                                                      className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
+                                                        item.nilai["Kalori Tinggi"] === "Ya"
+                                                          ? "bg-red-500/20 text-red-400"
+                                                          : "bg-green-500/20 text-green-400"
+                                                      }`}
+                                                    >
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
+                                                    </span>
+                                                  </div>
+                                                  
+                                                  <p className="text-white/50 text-xs mb-2">
+                                                    {item.nilai["Kategori Makanan"]}
+                                                  </p>
+
+                                                  {/* Rekomendasi Konsumsi */}
+                                                  {pasien.kategori === "Surplus Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+                                                  
+                                                  {pasien.kategori === "Defisit Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {pasien.kategori === "Kalori Normal" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-yellow-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Sedang
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {/* Badge Nutrisi */}
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                      {item.nilai["Jumlah Kalori"]} kkal
+                                                    </span>
+                                                    {item.nilai["Protein Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                        Protein
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Karbo Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
+                                                        Karbo
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Lemak Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                                                        Lemak
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["IG Tinggi"] === "Tidak" && (
+                                                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                                                        IG Rendah
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Camilan */}
+                                        {groupedByCategory.camilan.length > 0 && (
+                                          <div>
+                                            <h6 className="text-orange-400 font-semibold text-sm mb-2 flex items-center gap-2">
+                                              🍪 Camilan ({groupedByCategory.camilan.length})
+                                            </h6>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                              {groupedByCategory.camilan.map((item, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all border border-orange-500/20"
+                                                >
+                                                  <div className="flex justify-between items-start gap-2 mb-2">
+                                                    <p className="text-white text-sm font-medium flex-1">
+                                                      {item.nilai["Nama Makanan"]}
+                                                    </p>
+                                                    <span
+                                                      className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
+                                                        item.nilai["Kalori Tinggi"] === "Ya"
+                                                          ? "bg-red-500/20 text-red-400"
+                                                          : "bg-green-500/20 text-green-400"
+                                                      }`}
+                                                    >
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
+                                                    </span>
+                                                  </div>
+                                                  
+                                                  <p className="text-white/50 text-xs mb-2">
+                                                    {item.nilai["Kategori Makanan"]}
+                                                  </p>
+
+                                                  {/* Rekomendasi Konsumsi */}
+                                                  {pasien.kategori === "Surplus Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+                                                  
+                                                  {pasien.kategori === "Defisit Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {pasien.kategori === "Kalori Normal" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-yellow-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Konsumsi Secukupnya / Porsi Sedang
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {/* Badge Nutrisi */}
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                      {item.nilai["Jumlah Kalori"]} kkal
+                                                    </span>
+                                                    {item.nilai["Protein Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                        Protein
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Karbo Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
+                                                        Karbo
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Lemak Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                                                        Lemak
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["IG Tinggi"] === "Tidak" && (
+                                                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                                                        IG Rendah
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Lainnya (jika ada) */}
+                                        {groupedByCategory.lainnya.length > 0 && (
+                                          <div>
+                                            <h6 className="text-gray-400 font-semibold text-sm mb-2 flex items-center gap-2">
+                                              🍽️ Lainnya ({groupedByCategory.lainnya.length})
+                                            </h6>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                              {groupedByCategory.lainnya.map((item, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-all"
+                                                >
+                                                  <div className="flex justify-between items-start gap-2 mb-2">
+                                                    <p className="text-white text-sm font-medium flex-1">
+                                                      {item.nilai["Nama Makanan"]}
+                                                    </p>
+                                                    <span
+                                                      className={`px-2 py-0.5 rounded text-xs whitespace-nowrap ${
+                                                        item.nilai["Kalori Tinggi"] === "Ya"
+                                                          ? "bg-red-500/20 text-red-400"
+                                                          : "bg-green-500/20 text-green-400"
+                                                      }`}
+                                                    >
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" ? "Tinggi" : "Rendah"}
+                                                    </span>
+                                                  </div>
+                                                  
+                                                  <p className="text-white/50 text-xs mb-2">
+                                                    {item.nilai["Kategori Makanan"]}
+                                                  </p>
+
+                                                  {/* Rekomendasi Konsumsi */}
+                                                  {pasien.kategori === "Surplus Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+                                                  
+                                                  {pasien.kategori === "Defisit Kalori" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-red-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Rendah
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {pasien.kategori === "Kalori Normal" && (
+                                                    <>
+                                                      {item.nilai["Kalori Tinggi"] === "Ya" && (
+                                                        <p className="text-yellow-400 text-xs mb-2 font-medium">
+                                                          ⚠️ Tidak Disarankan / Porsi Sedang
+                                                        </p>
+                                                      )}
+                                                    </>
+                                                  )}
+
+                                                  {/* Badge Nutrisi */}
+                                                  <div className="flex flex-wrap gap-1">
+                                                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                      {item.nilai["Jumlah Kalori"]} kkal
+                                                    </span>
+                                                    {item.nilai["Protein Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                                                        Protein
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Karbo Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
+                                                        Karbo
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["Lemak Tinggi"] === "Ya" && (
+                                                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                                                        Lemak
+                                                      </span>
+                                                    )}
+                                                    {item.nilai["IG Tinggi"] === "Tidak" && (
+                                                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                                                        IG Rendah
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
-                                    ))}
-                                  </div>
+                                    );
+                                  })()}
 
                                   {/* Catatan */}
                                   <div className="mt-4 p-3 bg-white/5 rounded-lg">
                                     <p className="text-white/60 text-xs leading-relaxed">
                                       💡 {pasien.kategori === "Surplus Kalori"
-                                        ? "Konsumsi makanan tinggi kalori dan nutrisi untuk meningkatkan asupan energi harian Anda."
-                                        : "Fokus pada makanan rendah kalori, tinggi serat, dan protein untuk membantu mengurangi asupan kalori harian."}
+                                        ? "Menu terdiri dari 6 makanan tinggi kalori dan 3 makanan rendah kalori (total 10 menu) yang dipilih dari berbagai kategori untuk meningkatkan asupan kalori secara optimal."
+                                        : pasien.kategori === "Defisit Kalori"
+                                        ? "Menu terdiri dari 10 makanan rendah kalori yang dipilih dari berbagai kategori untuk membantu mengurangi asupan kalori harian secara efektif."
+                                        : "Menu terdiri dari 5 makanan tinggi kalori dan 5 makanan rendah kalori (total 10 menu) yang seimbang dari berbagai kategori untuk menjaga asupan kalori tetap normal."}
                                     </p>
                                   </div>
                                 </div>
@@ -525,15 +1130,6 @@ const HasilAkhirPasien = () => {
                                 <p className="text-white/50 text-sm italic">
                                   Tidak ada rekomendasi makanan tersedia untuk kategori ini.
                                 </p>
-                              )}
-
-                              {/* Tambahkan pesan khusus untuk kategori normal */}
-                              {pasien.kategori === "Kalori Normal" && (
-                                <div className="mt-4 p-3 bg-white/5 rounded-lg">
-                                  <p className="text-white/60 text-xs leading-relaxed">
-                                    💡 Pertahankan pola makan seimbang dengan kombinasi makanan berkalori tinggi dan rendah untuk menjaga asupan kalori tetap normal.
-                                  </p>
-                                </div>
                               )}
                             </div>
                           );
